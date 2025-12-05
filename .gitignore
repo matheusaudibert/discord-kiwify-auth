@@ -1,0 +1,4 @@
+.env
+src/bindings.json
+src/emails.csv
+node_modules/
