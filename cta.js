@@ -61,7 +61,7 @@ const payload = {
         {
           type: 10,
           content:
-            "Para obter acesso completo ao servidor, basta:\n- Acesse o canal **<#1445619259022774365>** logo abaixo;\n- Clique em **Verificar e-mail**;\n- Digite o **mesmo e-mail** utilizado na sua inscrição para liberar do **Acelera Dev**."
+            `Para obter acesso completo ao servidor, basta:\n- Acesse o canal **<#${process.env.VERIFICATION_CHANNEL_ID}>** logo abaixo;\n- Clique em **Verificar e-mail**;\n- Digite o **mesmo e-mail** utilizado na sua inscrição para liberar do **Acelera Dev**.`
         },
         {
           type: 10,
