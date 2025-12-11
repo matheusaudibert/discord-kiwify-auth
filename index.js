@@ -94,7 +94,8 @@ app.post("/", async (req, res) => {
   res.sendStatus(200);
 });
 
-app.listen(3000, () => {
-  console.log("Servidor ouvindo na porta 3000");
+// Shardcloud exige porta 80
+app.listen(80, () => {
+  console.log("Servidor ouvindo na porta 80");
   startDiscordBot();
 });
