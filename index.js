@@ -35,7 +35,6 @@ app.post("/", async (req, res) => {
 
   let emails = readEmails();
 
-  // Venda aprovada
   if (eventType === "order_approved") {
     if (!emails.includes(email)) {
       emails.push(email);
@@ -44,7 +43,6 @@ app.post("/", async (req, res) => {
     }
   }
 
-  // Reembolso realizado
   else if (eventType === "order_refunded") {
     if (emails.includes(email)) {
       emails = emails.filter((e) => e !== email);
