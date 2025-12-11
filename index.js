@@ -6,27 +6,27 @@ import { startDiscordBot, client } from "./src/client.js";
 const app = express();
 app.use(express.json());
 
-// Caminho do CSV dentro da pasta src
 const CSV_PATH = path.join(process.cwd(), "src", "emails.csv");
 const BINDINGS_PATH = path.join(process.cwd(), "src", "bindings.json");
 
-// Garante que o CSV exista
 if (!fs.existsSync(CSV_PATH)) {
   fs.writeFileSync(CSV_PATH, "");
   console.log("Criado arquivo src/emails.csv");
 }
 
-// Ler lista de emails
 function readEmails() {
   const content = fs.readFileSync(CSV_PATH, "utf-8").trim();
   if (!content) return [];
   return content.split("\n").map((line) => line.trim());
 }
 
-// Função para salvar lista completa
 function saveEmails(list) {
   fs.writeFileSync(CSV_PATH, list.join("\n") + "\n");
 }
+
+app.get("/", (req, res) => {
+  res.send("Webhook Kiwify rodando");
+});
 
 app.post("/", async (req, res) => {
   const body = req.body;
@@ -54,19 +54,15 @@ app.post("/", async (req, res) => {
       saveEmails(emails);
       console.log(`Email removido por reembolso: ${email}`);
 
-      // Remove membro do Discord e remove vínculo
       try {
         if (fs.existsSync(BINDINGS_PATH)) {
           const bindings = JSON.parse(fs.readFileSync(BINDINGS_PATH, "utf-8"));
           const userId = bindings[email];
 
           if (userId) {
-            // Remove do JSON de vínculos
             delete bindings[email];
             fs.writeFileSync(BINDINGS_PATH, JSON.stringify(bindings, null, 2));
 
-            // Expulsa do servidor
-            // Usamos o canal de verificação para encontrar a Guilda correta
             const channelId = process.env.VERIFICATION_CHANNEL_ID;
             if (channelId) {
               const channel = await client.channels.fetch(channelId);
@@ -94,7 +90,6 @@ app.post("/", async (req, res) => {
   res.sendStatus(200);
 });
 
-// Shardcloud exige porta 80
 app.listen(80, () => {
   console.log("Servidor ouvindo na porta 80");
   startDiscordBot();
