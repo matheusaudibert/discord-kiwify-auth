@@ -40,19 +40,16 @@ app.post("/", async (req, res) => {
     if (!emails.includes(email)) {
       emails.push(email);
       saveEmails(emails);
-      console.log(`Email adicionado: ${email}`);
-    } else {
-      console.log(`Email já existia: ${email}`);
+      console.log(`[COMPRA APROVADA] Email adicionado: ${email}`);
     }
   }
 
   // Reembolso realizado
   else if (eventType === "order_refunded") {
     if (emails.includes(email)) {
-      // Remove do CSV
       emails = emails.filter((e) => e !== email);
       saveEmails(emails);
-      console.log(`Email removido por reembolso: ${email}`);
+      console.log(`[REEMBOLSO APROVADO] Email removido: ${email}`);
 
       try {
         if (fs.existsSync(BINDINGS_PATH)) {
@@ -70,9 +67,9 @@ app.post("/", async (req, res) => {
                 const member = await channel.guild.members.fetch(userId).catch(() => null);
                 if (member) {
                   await member.kick("Reembolso Kiwify");
-                  console.log(`Usuário ${userId} expulso do servidor.`);
+                  console.log(`[REEMBOLSO APROVADO] Usuário ${userId} expulso do servidor.`);
                 } else {
-                  console.log(`Usuário ${userId} não encontrado no servidor.`);
+                  console.log(`[REEMBOLSO APROVADO] Usuário ${userId} não encontrado no servidor.`);
                 }
               }
             }
