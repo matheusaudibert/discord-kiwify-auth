@@ -1,5 +1,3 @@
 .env
-src/bindings.json
-src/emails.csv
 node_modules/
 email_etl.py
