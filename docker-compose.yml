@@ -6,9 +6,6 @@ services:
       - "3200:80"
     env_file:
       - .env
-    volumes:
-      - ./src/emails.csv:/app/src/emails.csv
-      - ./src/bindings.json:/app/src/bindings.json
     deploy:
       resources:
         limits:
