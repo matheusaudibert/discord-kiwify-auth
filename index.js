@@ -1,91 +1,58 @@
-import express from "express";
-import fs from "fs";
-import path from "path";
-import { startDiscordBot, client } from "./src/client.js";
+import './config/env.js';
+import express from 'express';
+import mongoose from 'mongoose';
+import { env } from './config/env.js';
+import { client, startBot } from './services/discord.js';
+import { handleOrderApproved, handleOrderRefunded } from './services/kiwifyWebhook.js';
 
+// MongoDB
+console.log(`[MongoDB] Connecting to ${env.mongodbUri}...`);
+await mongoose.connect(env.mongodbUri);
+console.log('[MongoDB] Connected successfully');
+
+// Discord bot
+startBot();
+
+// Express
 const app = express();
 app.use(express.json());
 
-const CSV_PATH = path.join(process.cwd(), "src", "emails.csv");
-const BINDINGS_PATH = path.join(process.cwd(), "src", "bindings.json");
-
-if (!fs.existsSync(CSV_PATH)) {
-  fs.writeFileSync(CSV_PATH, "");
-  console.log("Criado arquivo src/emails.csv");
-}
-
-function readEmails() {
-  const content = fs.readFileSync(CSV_PATH, "utf-8").trim();
-  if (!content) return [];
-  return content.split("\n").map((line) => line.trim());
-}
-
-function saveEmails(list) {
-  fs.writeFileSync(CSV_PATH, list.join("\n") + "\n");
-}
-
-app.get("/", (req, res) => {
-  res.send("Webhook Kiwify rodando");
+app.get('/', (req, res) => {
+  console.log(`[Express] GET / — health check from ${req.ip}`);
+  res.send('Webhook Kiwify rodando');
 });
 
-app.post("/", async (req, res) => {
+app.post('/', async (req, res) => {
   const body = req.body;
   const eventType = body?.webhook_event_type;
-  const email = body?.Customer?.email;
+  const email = body?.Customer?.email?.trim().toLowerCase();
 
-  let emails = readEmails();
+  console.log(`[Express] POST / — event: ${eventType ?? 'undefined'} | email: ${email ?? 'undefined'} | ip: ${req.ip}`);
 
-  if (eventType === "order_approved") {
-    if (!emails.includes(email)) {
-      emails.push(email);
-      saveEmails(emails);
-      console.log(`[COMPRA APROVADA] Email adicionado: ${email}`);
+  try {
+    if (!email) {
+      console.warn('[Express] Request rejected: missing customer email');
+      return res.status(400).json({ error: 'Missing customer email' });
     }
-  }
 
-  else if (eventType === "order_refunded") {
-    if (emails.includes(email)) {
-      emails = emails.filter((e) => e !== email);
-      saveEmails(emails);
-      console.log(`[REEMBOLSO APROVADO] Email removido: ${email}`);
-
-      try {
-        if (fs.existsSync(BINDINGS_PATH)) {
-          const bindings = JSON.parse(fs.readFileSync(BINDINGS_PATH, "utf-8"));
-          const userId = bindings[email];
-
-          if (userId) {
-            delete bindings[email];
-            fs.writeFileSync(BINDINGS_PATH, JSON.stringify(bindings, null, 2));
-
-            const channelId = process.env.VERIFICATION_CHANNEL_ID;
-            if (channelId) {
-              const channel = await client.channels.fetch(channelId);
-              if (channel && channel.guild) {
-                const member = await channel.guild.members.fetch(userId).catch(() => null);
-                if (member) {
-                  await member.kick("Reembolso Kiwify");
-                  console.log(`[REEMBOLSO APROVADO] Usuário ${userId} expulso do servidor.`);
-                } else {
-                  console.log(`[REEMBOLSO APROVADO] Usuário ${userId} não encontrado no servidor.`);
-                }
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Erro ao processar kick por reembolso:", err);
-      }
-
+    if (eventType === 'order_approved') {
+      console.log(`[Express] Dispatching order_approved for ${email}`);
+      await handleOrderApproved(email, client);
+    } else if (eventType === 'order_refunded') {
+      console.log(`[Express] Dispatching order_refunded for ${email}`);
+      await handleOrderRefunded(email, client);
     } else {
-      console.log(`Email não estava na lista: ${email}`);
+      console.warn(`[Express] Unhandled event type received: "${eventType}"`);
     }
-  }
 
-  res.sendStatus(200);
+    console.log(`[Express] Request handled successfully — event: ${eventType} | email: ${email}`);
+    res.status(200).json({ ok: true });
+  } catch (err) {
+    console.error(`[Express] Unexpected error handling event "${eventType}" for ${email}:`, err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-app.listen(80, () => {
-  console.log("Servidor ouvindo na porta 80");
-  startDiscordBot();
+app.listen(env.port, () => {
+  console.log(`[Express] Server listening on port ${env.port}`);
 });
